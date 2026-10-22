@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Club Rosa Arequipa · Masajes a domicilio</title>
+  <meta name="description" content="Masajes relajantes a domicilio en Arequipa. Sesiones de 30 minutos, 1 hora y 2 horas. Reserva fácil por WhatsApp.">
+  <meta name="theme-color" content="#c2185b">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="nav">
+    <a href="#inicio" class="logo">Club <span>Rosa</span></a>
+    <nav>
+      <a href="#servicios">Servicios</a>
+      <a href="#masajistas">Masajistas</a>
+      <a href="#como">¿Cómo funciona?</a>
+      <a href="#reservar" class="btn btn-sm">Reservar</a>
+    </nav>
+  </header>
+
+  <section id="inicio" class="hero">
+    <div class="hero-text">
+      <p class="tag">Arequipa · Servicio a domicilio</p>
+      <h1>Relájate sin salir de casa</h1>
+      <p class="lead">Masajes relajantes profesionales en tu domicilio, hotel u oficina. Eliges el tiempo, la masajista y la hora; nosotros llegamos a ti.</p>
+      <div class="hero-cta">
+        <a href="#reservar" class="btn">Reservar ahora</a>
+        <a href="#servicios" class="btn btn-ghost">Ver precios</a>
+      </div>
+    </div>
+    <div class="hero-card" aria-hidden="true">
+      <div class="petal">🌸</div>
+      <p>Desde</p>
+      <strong>S/ 75</strong>
+      <small>sesión de 30 minutos</small>
+    </div>
+  </section>
+
+  <section id="servicios" class="section">
+    <h2>Nuestros servicios</h2>
+    <p class="sub">Precios por sesión. El taxi se suma según la distancia (S/ 15, 20 o 25).</p>
+    <div class="grid cards" id="lista-servicios"></div>
+  </section>
+
+  <section id="masajistas" class="section alt">
+    <h2>Nuestras masajistas</h2>
+    <p class="sub">Elige a tu masajista favorita o deja que asignemos a la que esté disponible.</p>
+    <div class="grid team" id="lista-masajistas"></div>
+  </section>
+
+  <section id="como" class="section">
+    <h2>¿Cómo funciona?</h2>
+    <div class="grid steps">
+      <div class="step"><span>1</span><h3>Llena tu solicitud</h3><p>Elige servicio, fecha, hora y masajista.</p></div>
+      <div class="step"><span>2</span><h3>Confirmamos por WhatsApp</h3><p>Te escribimos para confirmar disponibilidad y dirección.</p></div>
+      <div class="step"><span>3</span><h3>Llegamos a tu domicilio</h3><p>La masajista llega puntual con todo lo necesario.</p></div>
+      <div class="step"><span>4</span><h3>Pagas al final</h3><p>Efectivo, Yape, Plin o transferencia.</p></div>
+    </div>
+    <div class="taxi">
+      <h3>Costo de taxi según tu zona</h3>
+      <div class="grid zonas" id="lista-zonas"></div>
+    </div>
+  </section>
+
+  <section id="reservar" class="section alt">
+    <h2>Solicita tu masaje</h2>
+    <p class="sub">Tu solicitud se envía por WhatsApp. Te confirmamos en minutos.</p>
+    <form id="form" class="form" novalidate>
+      <div class="row">
+        <label>Nombre<input name="nombre" required autocomplete="name" placeholder="Tu nombre"></label>
+        <label>Celular<input name="celular" required inputmode="tel" autocomplete="tel" placeholder="9XX XXX XXX"></label>
+      </div>
+      <div class="row">
+        <label>Servicio<select name="servicio" id="sel-servicio" required></select></label>
+        <label>Masajista<select name="masajista" id="sel-masajista"></select></label>
+      </div>
+      <div class="row">
+        <label>Fecha<input type="date" name="fecha" id="fecha" required></label>
+        <label>Hora<input type="time" name="hora" required min="09:00" max="23:00" value="18:00"></label>
+      </div>
+      <div class="row">
+        <label>Distrito<select name="distrito" id="sel-distrito" required></select></label>
+        <label>Zona (para el taxi)<select name="zona" id="sel-zona" required></select></label>
+      </div>
+      <label>Dirección y referencia<input name="direccion" required autocomplete="street-address" placeholder="Calle, número, referencia"></label>
+      <label>Comentarios (opcional)<textarea name="notas" rows="2" placeholder="Ej.: preferencia de presión, alguna zona con molestia..."></textarea></label>
+
+      <div class="total">
+        <div><span>Servicio</span><b id="t-servicio">S/ 0</b></div>
+        <div><span>Taxi</span><b id="t-taxi">S/ 0</b></div>
+        <div class="big"><span>Total estimado</span><b id="t-total">S/ 0</b></div>
+      </div>
+      <p class="error" id="error" role="alert"></p>
+      <button class="btn btn-block" type="submit">Enviar solicitud por WhatsApp</button>
+      <p class="small">Al enviar se abrirá WhatsApp con tu solicitud lista. Solo atendemos a mayores de 18 años. Servicio de masaje relajante y terapéutico.</p>
+    </form>
+  </section>
+
+  <footer class="footer">
+    <p class="logo">Club <span>Rosa</span></p>
+    <p>Masajes a domicilio · Arequipa, Perú</p>
+    <p><a id="wa-link" href="#" target="_blank" rel="noopener">WhatsApp</a></p>
+    <p class="small">© <span id="anio"></span> Club Rosa Arequipa</p>
+  </footer>
+
+  <a id="wa-float" class="wa-float" href="#" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">💬</a>
+  <script src="script.js"></script>
+</body>
+</html>
