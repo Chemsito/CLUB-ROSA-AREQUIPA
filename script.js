@@ -1,6 +1,7 @@
 // ===== CONFIGURACION: cambia aqui los datos del negocio =====
 const CONFIG = {
   whatsapp: '51963445394', // numero del negocio con codigo de pais (51 = Peru), sin + ni espacios
+  sheetsUrl: '', // URL de la aplicacion web de Google Apps Script (ver google-sheets/README.md); vacio = solo WhatsApp
   servicios: [
     { nombre: 'Masaje 30 min', minutos: 30, precio: 75, desc: 'Ideal para liberar tensión en espalda y cuello.' },
     { nombre: 'Masaje 1 hora', minutos: 60, precio: 135, desc: 'Relajación completa de cuerpo entero.', destacado: true },
@@ -109,7 +110,14 @@ $('#form').addEventListener('submit', e => {
     `Total estimado: ${soles(t.total)} (servicio ${soles(t.precio)} + taxi ${soles(t.taxi)})`
   ].filter(Boolean).join('\n');
   window.open(`https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+  guardarEnSheets({ ...f, fecha, total: t.total });
 });
+
+// Copia la reserva en Google Sheets; si falla, la reserva igual llega por WhatsApp
+function guardarEnSheets(datos) {
+  if (!CONFIG.sheetsUrl) return;
+  fetch(CONFIG.sheetsUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams(datos) }).catch(() => {});
+}
 
 const wa = `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent('Hola Club Rosa, quisiera información sobre los masajes a domicilio.')}`;
 $('#wa-link').href = wa; $('#wa-float').href = wa;
