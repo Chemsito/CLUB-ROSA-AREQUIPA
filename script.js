@@ -1,7 +1,7 @@
 // ===== CONFIGURACION: cambia aqui los datos del negocio =====
 const CONFIG = {
   whatsapp: '51963445394', // numero del negocio con codigo de pais (51 = Peru), sin + ni espacios
-  sheetsUrl: '', // URL de la aplicacion web de Google Apps Script (ver google-sheets/README.md); vacio = solo WhatsApp
+  sheetsUrl: 'https://script.google.com/macros/s/AKfycbzhLvFDL5h3MAcENLERUd9eIfxnSB9XmGGZIRLmTiZEd3guAYVAD0i6QZcbKZViPbs/exec', // URL de la aplicacion web de Google Apps Script (ver google-sheets/README.md); vacio = solo WhatsApp
   servicios: [
     { nombre: 'Masaje 30 min', minutos: 30, precio: 75, desc: 'Ideal para liberar tensión en espalda y cuello.' },
     { nombre: 'Masaje 1 hora', minutos: 60, precio: 135, desc: 'Relajación completa de cuerpo entero.', destacado: true },
