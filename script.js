@@ -7,22 +7,16 @@ const CONFIG = {
     { nombre: 'Masaje 1 hora', minutos: 60, precio: 135, desc: 'Relajación completa de cuerpo entero.', destacado: true },
     { nombre: 'Masaje 2 horas', minutos: 120, precio: 195, desc: 'Sesión extendida para una desconexión total.' }
   ],
-  zonas: [
-    { nombre: 'Cercana', taxi: 15, desc: 'Cercado, Yanahuara, Cayma, Miraflores, Mariano Melgar' },
-    { nombre: 'Media', taxi: 20, desc: 'Cerro Colorado, Bustamante y Rivero, Sachaca, Paucarpata, Hunter, Alto Selva Alegre' },
-    { nombre: 'Lejana', taxi: 25, desc: 'Socabaya, Tiabaya, Sabandía, Characato y otros' }
-  ],
+  taxi: 15, // precio unico del taxi, a cualquier distrito
   masajistas: [
     { nombre: 'Valeria', especialidad: 'Relajante y descontracturante' },
     { nombre: 'Camila', especialidad: 'Relajante y piedras calientes' },
     { nombre: 'Daniela', especialidad: 'Relajante y aromaterapia' }
   ],
-  distritos: {
-    'Cercado': 'Cercana', 'Yanahuara': 'Cercana', 'Cayma': 'Cercana', 'Miraflores': 'Cercana', 'Mariano Melgar': 'Cercana',
-    'Cerro Colorado': 'Media', 'J.L. Bustamante y Rivero': 'Media', 'Sachaca': 'Media', 'Paucarpata': 'Media',
-    'Jacobo Hunter': 'Media', 'Alto Selva Alegre': 'Media',
-    'Socabaya': 'Lejana', 'Tiabaya': 'Lejana', 'Sabandía': 'Lejana', 'Characato': 'Lejana', 'Otro': 'Media'
-  }
+  distritos: [
+    'Cercado', 'Yanahuara', 'Cayma', 'Miraflores', 'Mariano Melgar', 'Cerro Colorado', 'J.L. Bustamante y Rivero',
+    'Sachaca', 'Paucarpata', 'Jacobo Hunter', 'Alto Selva Alegre', 'Socabaya', 'Tiabaya', 'Sabandía', 'Characato', 'Otro'
+  ]
 };
 
 const $ = s => document.querySelector(s);
@@ -39,15 +33,13 @@ $('#lista-servicios').innerHTML = CONFIG.servicios.map(s => `
     <a href="#reservar" class="btn btn-ghost" data-servicio="${s.nombre}">Elegir</a>
   </article>`).join('');
 
-$('#lista-zonas').innerHTML = CONFIG.zonas.map(z => `
-  <div class="zona"><b>${z.nombre}</b><span>${soles(z.taxi)}</span><small>${z.desc}</small></div>`).join('');
+document.querySelectorAll('.precio-taxi').forEach(el => { el.textContent = soles(CONFIG.taxi); });
 
 // ----- Formulario -----
 const opt = (v, t = v) => `<option value="${v}">${t}</option>`;
 $('#sel-servicio').innerHTML = CONFIG.servicios.map(s => opt(s.nombre, `${duracion(s.minutos)} — ${soles(s.precio)}`)).join('');
 $('#sel-servicio').value = 'Masaje 1 hora';
-$('#sel-distrito').innerHTML = opt('', 'Elige tu distrito') + Object.keys(CONFIG.distritos).map(d => opt(d)).join('');
-$('#sel-zona').innerHTML = CONFIG.zonas.map(z => opt(z.nombre, `${z.nombre} — taxi ${soles(z.taxi)}`)).join('');
+$('#sel-distrito').innerHTML = opt('', 'Elige tu distrito') + CONFIG.distritos.map(d => opt(d)).join('');
 
 const hoy = new Date();
 const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -56,19 +48,13 @@ $('#fecha').value = iso(hoy);
 
 function calcular() {
   const s = CONFIG.servicios.find(x => x.nombre === $('#sel-servicio').value);
-  const z = CONFIG.zonas.find(x => x.nombre === $('#sel-zona').value);
-  const precio = s ? s.precio : 0, taxi = z ? z.taxi : 0;
+  const precio = s ? s.precio : 0, taxi = CONFIG.taxi;
   $('#t-servicio').textContent = soles(precio);
   $('#t-taxi').textContent = soles(taxi);
   $('#t-total').textContent = soles(precio + taxi);
   return { precio, taxi, total: precio + taxi };
 }
-$('#sel-distrito').addEventListener('change', e => {
-  const zona = CONFIG.distritos[e.target.value];
-  if (zona) $('#sel-zona').value = zona;
-  calcular();
-});
-['#sel-servicio', '#sel-zona'].forEach(id => $(id).addEventListener('change', calcular));
+$('#sel-servicio').addEventListener('change', calcular);
 calcular();
 
 document.addEventListener('click', e => {
@@ -95,13 +81,13 @@ $('#form').addEventListener('submit', e => {
     `Servicio: ${f.servicio}`,
     `Masajista: ${f.masajista}`,
     `Fecha: ${fecha}  Hora: ${f.hora}`,
-    `Distrito: ${f.distrito}  (Zona ${f.zona})`,
+    `Distrito: ${f.distrito}`,
     `Dirección: ${f.direccion}`,
     f.notas ? `Notas: ${f.notas}` : '',
     `Total estimado: ${soles(t.total)} (servicio ${soles(t.precio)} + taxi ${soles(t.taxi)})`
   ].filter(Boolean).join('\n');
   window.open(`https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
-  guardarEnSheets({ ...f, fecha, total: t.total });
+  guardarEnSheets({ ...f, fecha, taxi: t.taxi, total: t.total });
 });
 
 // Copia la reserva en Google Sheets; si falla, la reserva igual llega por WhatsApp

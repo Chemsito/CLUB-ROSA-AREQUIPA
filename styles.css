@@ -76,9 +76,7 @@ a { color: inherit; }
 .step span { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--rosa-palido); color: var(--rosa); font-weight: 600; font-size: 1.2rem; }
 .step h3 { margin: 12px 0 6px; font-size: 1.15rem; }
 .step p { color: var(--gris); font-size: .92rem; }
-.taxi { max-width: 1000px; margin: 50px auto 0; text-align: center; }
-.taxi h3 { margin-bottom: 20px; color: var(--rosa-osc); }
-.zonas { grid-template-columns: repeat(3, 1fr); }
+.taxi { max-width: 420px; margin: 50px auto 0; text-align: center; }
 .zona { background: var(--rosa-palido); border-radius: var(--radio); padding: 20px; display: flex; flex-direction: column; gap: 4px; }
 .zona span { font-size: 1.6rem; font-weight: 600; color: var(--rosa); }
 .zona small { color: var(--gris); }
@@ -106,7 +104,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--r
   .lead { margin: 0 auto; }
   .hero-cta { justify-content: center; }
   .hero-card { width: 220px; height: 220px; }
-  .cards, .zonas { grid-template-columns: 1fr; }
+  .cards { grid-template-columns: 1fr; }
   .steps { grid-template-columns: 1fr 1fr; }
   .card.featured { transform: none; }
   .nav nav a:not(.btn) { display: none; }

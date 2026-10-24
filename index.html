@@ -43,7 +43,7 @@
 
   <section id="servicios" class="section">
     <h2>Nuestros servicios</h2>
-    <p class="sub">Precios por sesión. El taxi se suma según la distancia (S/ 15, 20 o 25).</p>
+    <p class="sub">Precios por sesión. Se suma el taxi, precio único de <span class="precio-taxi">S/ 15</span> a cualquier distrito.</p>
     <div class="grid cards" id="lista-servicios"></div>
   </section>
 
@@ -63,8 +63,11 @@
       <div class="step"><span>4</span><h3>Pagas al final</h3><p>Efectivo, Yape, Plin o transferencia.</p></div>
     </div>
     <div class="taxi">
-      <h3>Costo de taxi según tu zona</h3>
-      <div class="grid zonas" id="lista-zonas"></div>
+      <div class="zona">
+        <b>🚕 Taxi</b>
+        <span class="precio-taxi">S/ 15</span>
+        <small>Precio único a cualquier distrito de Arequipa</small>
+      </div>
     </div>
   </section>
 
@@ -86,9 +89,8 @@
       </div>
       <div class="row">
         <label>Distrito<select name="distrito" id="sel-distrito" required></select></label>
-        <label>Zona (para el taxi)<select name="zona" id="sel-zona" required></select></label>
+        <label>Dirección y referencia<input name="direccion" required autocomplete="street-address" placeholder="Calle, número, referencia"></label>
       </div>
-      <label>Dirección y referencia<input name="direccion" required autocomplete="street-address" placeholder="Calle, número, referencia"></label>
       <input type="text" name="web" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
       <label>Comentarios (opcional)<textarea name="notas" rows="2" placeholder="Ej.: preferencia de presión, alguna zona con molestia..."></textarea></label>
 

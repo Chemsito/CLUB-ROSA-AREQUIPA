@@ -7,7 +7,7 @@ const DASH = 'DASHBOARD';
 const CALC = '_calc';
 const MASAJISTAS = 'MASAJISTAS';
 const COLUMNAS = ['Fecha_Solicitud', 'Cliente', 'Celular', 'Distrito', 'Direccion', 'Fecha_Servicio', 'Hora',
-  'Servicio', 'Masajista_Preferida', 'Zona_Taxi', 'Total_Estimado', 'Estado', 'Notas'];
+  'Servicio', 'Masajista_Preferida', 'Taxi', 'Total_Estimado', 'Estado', 'Notas'];
 const ESTADOS = ['Nueva', 'Confirmada', 'Atendida', 'Cancelada'];
 const C = { rosa: '#C2185B', osc: '#880E4F', claro: '#F8BBD0', palido: '#FCE4EC', fondo: '#FFF5F8', gris: '#7A6470', blanco: '#FFFFFF' };
 
@@ -22,7 +22,7 @@ function doPost(e) {
     const hoja = obtenerHoja();
     hoja.appendRow([
       new Date(), p.nombre, p.celular, p.distrito, p.direccion, aFecha(p.fecha), p.hora,
-      p.servicio, p.masajista, p.zona, Number(p.total) || 0, 'Nueva', p.notas
+      p.servicio, p.masajista, Number(p.taxi) || 0, Number(p.total) || 0, 'Nueva', p.notas
     ].map(limpiar));
     return respuesta({ ok: true });
   } finally {
@@ -158,7 +158,7 @@ function formatearReservas(h) {
   h.setFrozenRows(1);
   h.getRange('A2:A').setNumberFormat('dd/mm/yyyy hh:mm');
   h.getRange('F2:F').setNumberFormat('dd/mm/yyyy');
-  h.getRange('K2:K').setNumberFormat('"S/ "#,##0');
+  h.getRange('J2:K').setNumberFormat('"S/ "#,##0');
   h.getRange('L2:L').setDataValidation(SpreadsheetApp.newDataValidation()
     .requireValueInList(ESTADOS, true).setAllowInvalid(false).build());
   const colores = { Nueva: ['#FFF3CD', '#8A6D00'], Confirmada: ['#DCEBFF', '#1A4F8B'], Atendida: ['#DDF5E3', '#1E6B34'], Cancelada: ['#EEEEEE', '#777777'] };
