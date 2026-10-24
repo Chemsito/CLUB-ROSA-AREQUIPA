@@ -87,10 +87,28 @@
         <label>Fecha<input type="date" name="fecha" id="fecha" required></label>
         <label>Hora<input type="time" name="hora" required min="09:00" max="23:00" value="18:00"></label>
       </div>
-      <div class="row">
-        <label>Distrito<select name="distrito" id="sel-distrito" required></select></label>
-        <label>Dirección y referencia<input name="direccion" required autocomplete="street-address" placeholder="Calle, número, referencia"></label>
-      </div>
+      <label>Distrito<select name="distrito" id="sel-distrito" required></select></label>
+      <fieldset class="ubicacion">
+        <legend>¿Cómo nos indicas tu dirección?</legend>
+        <input type="hidden" name="modo" id="modo-ubicacion" value="texto">
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" data-modo="texto" aria-selected="true">✍️ Escribir</button>
+          <button type="button" role="tab" data-modo="link" aria-selected="false">🔗 Link de Maps</button>
+          <button type="button" role="tab" data-modo="mapa" aria-selected="false">🗺️ En el mapa</button>
+        </div>
+        <div data-panel="link" hidden>
+          <label>Link de Google Maps<input name="link" inputmode="url" autocomplete="off" placeholder="https://maps.app.goo.gl/..."></label>
+          <small class="ayuda">En Google Maps toca tu ubicación → <b>Compartir</b> → <b>Copiar enlace</b> y pégalo aquí.</small>
+        </div>
+        <div data-panel="mapa" hidden>
+          <div id="mapa" class="mapa"></div>
+          <div class="mapa-pie">
+            <button type="button" id="mi-ubicacion" class="btn btn-ghost btn-sm">📍 Usar mi ubicación</button>
+            <small class="ayuda" id="mapa-estado">Toca el mapa para marcar dónde estás. Puedes arrastrar el pin.</small>
+          </div>
+        </div>
+        <label><span id="txt-direccion">Dirección y referencia</span><input name="direccion" autocomplete="street-address" placeholder="Calle, número, referencia"></label>
+      </fieldset>
       <input type="text" name="web" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
       <label>Comentarios (opcional)<textarea name="notas" rows="2" placeholder="Ej.: preferencia de presión, alguna zona con molestia..."></textarea></label>
 

@@ -65,12 +65,91 @@ document.addEventListener('click', e => {
   calcular();
 });
 
+// ----- Direccion: escribirla, pegar un link de Google Maps o marcarla en el mapa -----
+const AREQUIPA = [-16.3989, -71.5369];
+let mapa = null, pin = null;
+document.querySelectorAll('.tabs [data-modo]').forEach(b => b.addEventListener('click', () => {
+  const modo = b.dataset.modo;
+  $('#modo-ubicacion').value = modo;
+  document.querySelectorAll('.tabs [data-modo]').forEach(x => x.setAttribute('aria-selected', x === b));
+  document.querySelectorAll('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== modo; });
+  $('#txt-direccion').textContent = modo === 'texto' ? 'Dirección y referencia' : 'Referencia (opcional)';
+  $('#form').direccion.placeholder = modo === 'texto' ? 'Calle, número, referencia' : 'Ej.: casa de rejas blancas, dpto. 302';
+  if (modo === 'mapa') abrirMapa();
+}));
+
+// Leaflet + OpenStreetMap: gratis y sin clave; se carga solo cuando eligen "En el mapa"
+function cargarLeaflet() {
+  if (window.L) return Promise.resolve();
+  const css = document.createElement('link');
+  Object.assign(css, { rel: 'stylesheet', href: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', integrity: 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=', crossOrigin: '' });
+  document.head.appendChild(css);
+  return new Promise((ok, falla) => {
+    const js = document.createElement('script');
+    Object.assign(js, { src: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', integrity: 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=', crossOrigin: '', onload: ok, onerror: falla });
+    document.head.appendChild(js);
+  });
+}
+
+function marcar(lat, lng) {
+  if (pin) pin.setLatLng([lat, lng]);
+  else {
+    pin = L.marker([lat, lng], { draggable: true }).addTo(mapa);
+    pin.on('dragend', () => { const p = pin.getLatLng(); marcar(p.lat, p.lng); });
+  }
+  $('#mapa-estado').textContent = '✅ Ubicación marcada. Puedes arrastrar el pin para ajustarla.';
+}
+
+async function abrirMapa() {
+  if (mapa) return setTimeout(() => mapa.invalidateSize(), 50);
+  try {
+    await cargarLeaflet();
+  } catch (e) {
+    $('#mapa-estado').textContent = 'No se pudo cargar el mapa. Usa el link de Maps o escribe tu dirección.';
+    return;
+  }
+  mapa = L.map('mapa').setView(AREQUIPA, 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+  mapa.on('click', e => marcar(e.latlng.lat, e.latlng.lng));
+}
+
+$('#mi-ubicacion').addEventListener('click', () => {
+  if (!navigator.geolocation) return ($('#mapa-estado').textContent = 'Tu celular no permite compartir la ubicación. Toca el mapa.');
+  $('#mapa-estado').textContent = 'Buscando tu ubicación...';
+  navigator.geolocation.getCurrentPosition(async p => {
+    await abrirMapa();
+    if (!mapa) return;
+    mapa.setView([p.coords.latitude, p.coords.longitude], 17);
+    marcar(p.coords.latitude, p.coords.longitude);
+  }, () => { $('#mapa-estado').textContent = 'No pudimos obtener tu ubicación. Toca el mapa para marcarla.'; }, { enableHighAccuracy: true, timeout: 15000 });
+});
+
+const esLinkMaps = u => /^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|(www\.)?google\.[a-z.]+\/maps|maps\.google\.[a-z.]+)\S*$/i.test(u.trim());
+
+// Devuelve { link, error } segun la opcion elegida
+function ubicacion(f) {
+  if (f.modo === 'link') {
+    if (!f.link.trim()) return { error: 'Pega el link de Google Maps.' };
+    if (!esLinkMaps(f.link)) return { error: 'El link no parece de Google Maps. Cópialo desde Compartir → Copiar enlace.' };
+    return { link: f.link.trim() };
+  }
+  if (f.modo === 'mapa') {
+    if (!pin) return { error: 'Marca tu ubicación en el mapa.' };
+    const p = pin.getLatLng();
+    return { link: `https://www.google.com/maps?q=${p.lat.toFixed(6)},${p.lng.toFixed(6)}` };
+  }
+  return { link: '' };
+}
+
 $('#form').addEventListener('submit', e => {
   e.preventDefault();
   const f = Object.fromEntries(new FormData(e.target));
-  const faltan = ['nombre', 'celular', 'fecha', 'hora', 'distrito', 'direccion'].filter(k => !String(f[k] || '').trim());
+  const requeridos = ['nombre', 'celular', 'fecha', 'hora', 'distrito'].concat(f.modo === 'texto' ? ['direccion'] : []);
+  const faltan = requeridos.filter(k => !String(f[k] || '').trim());
   if (faltan.length) { $('#error').textContent = 'Completa: ' + faltan.join(', ') + '.'; return; }
   if (!/^\d{9}$/.test(f.celular.replace(/\D/g, '').slice(-9))) { $('#error').textContent = 'Revisa tu número de celular (9 dígitos).'; return; }
+  const u = ubicacion(f);
+  if (u.error) { $('#error').textContent = u.error; return; }
   $('#error').textContent = '';
   const t = calcular();
   const fecha = f.fecha.split('-').reverse().join('/');
@@ -82,12 +161,15 @@ $('#form').addEventListener('submit', e => {
     `Masajista: ${f.masajista}`,
     `Fecha: ${fecha}  Hora: ${f.hora}`,
     `Distrito: ${f.distrito}`,
-    `Dirección: ${f.direccion}`,
+    u.link ? `📍 Ubicación: ${u.link}` : '',
+    f.direccion ? `${u.link ? 'Referencia' : 'Dirección'}: ${f.direccion}` : '',
     f.notas ? `Notas: ${f.notas}` : '',
     `Total estimado: ${soles(t.total)} (servicio ${soles(t.precio)} + taxi ${soles(t.taxi)})`
   ].filter(Boolean).join('\n');
   window.open(`https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
-  guardarEnSheets({ ...f, fecha, taxi: t.taxi, total: t.total });
+  // En la hoja, la columna Direccion guarda el texto y el link de ubicacion juntos
+  const direccion = [f.direccion.trim(), u.link].filter(Boolean).join(' · ');
+  guardarEnSheets({ ...f, direccion, fecha, taxi: t.taxi, total: t.total });
 });
 
 // Copia la reserva en Google Sheets; si falla, la reserva igual llega por WhatsApp
