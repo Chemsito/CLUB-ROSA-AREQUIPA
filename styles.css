@@ -91,7 +91,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--r
 .total .big { border-top: 1px dashed var(--rosa-claro); padding-top: 8px; font-size: 1.2rem; color: var(--rosa-osc); }
 .ubicacion { border: 1.5px solid #e8d3dc; border-radius: 14px; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ubicacion legend { font-size: .88rem; font-weight: 500; padding: 0 6px; }
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: var(--rosa-palido); padding: 4px; border-radius: 12px; }
+.tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; background: var(--rosa-palido); padding: 4px; border-radius: 12px; }
 .tabs button { font: inherit; font-size: .85rem; border: 0; background: transparent; color: var(--rosa-osc); padding: 9px 4px; border-radius: 9px; cursor: pointer; }
 .tabs button[aria-selected="true"] { background: var(--blanco); color: var(--rosa); font-weight: 600; box-shadow: 0 2px 8px rgba(136, 14, 79, .12); }
 .ubicacion [data-panel] { display: flex; flex-direction: column; gap: 8px; }

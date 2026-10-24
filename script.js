@@ -65,7 +65,7 @@ document.addEventListener('click', e => {
   calcular();
 });
 
-// ----- Direccion: escribirla, pegar un link de Google Maps o marcarla en el mapa -----
+// ----- Direccion: pegar un link de Google Maps o marcarla en el mapa -----
 const AREQUIPA = [-16.3989, -71.5369];
 let mapa = null, pin = null;
 document.querySelectorAll('.tabs [data-modo]').forEach(b => b.addEventListener('click', () => {
@@ -73,8 +73,6 @@ document.querySelectorAll('.tabs [data-modo]').forEach(b => b.addEventListener('
   $('#modo-ubicacion').value = modo;
   document.querySelectorAll('.tabs [data-modo]').forEach(x => x.setAttribute('aria-selected', x === b));
   document.querySelectorAll('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== modo; });
-  $('#txt-direccion').textContent = modo === 'texto' ? 'Dirección y referencia' : 'Referencia (opcional)';
-  $('#form').direccion.placeholder = modo === 'texto' ? 'Calle, número, referencia' : 'Ej.: casa de rejas blancas, dpto. 302';
   if (modo === 'mapa') abrirMapa();
 }));
 
@@ -128,24 +126,20 @@ const esLinkMaps = u => /^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|(www\.)?g
 
 // Devuelve { link, error } segun la opcion elegida
 function ubicacion(f) {
-  if (f.modo === 'link') {
-    if (!f.link.trim()) return { error: 'Pega el link de Google Maps.' };
-    if (!esLinkMaps(f.link)) return { error: 'El link no parece de Google Maps. Cópialo desde Compartir → Copiar enlace.' };
-    return { link: f.link.trim() };
-  }
   if (f.modo === 'mapa') {
     if (!pin) return { error: 'Marca tu ubicación en el mapa.' };
     const p = pin.getLatLng();
     return { link: `https://www.google.com/maps?q=${p.lat.toFixed(6)},${p.lng.toFixed(6)}` };
   }
-  return { link: '' };
+  if (!f.link.trim()) return { error: 'Pega el link de Google Maps o marca tu ubicación en el mapa.' };
+  if (!esLinkMaps(f.link)) return { error: 'El link no parece de Google Maps. Cópialo desde Compartir → Copiar enlace.' };
+  return { link: f.link.trim() };
 }
 
 $('#form').addEventListener('submit', e => {
   e.preventDefault();
   const f = Object.fromEntries(new FormData(e.target));
-  const requeridos = ['nombre', 'celular', 'fecha', 'hora', 'distrito'].concat(f.modo === 'texto' ? ['direccion'] : []);
-  const faltan = requeridos.filter(k => !String(f[k] || '').trim());
+  const faltan = ['nombre', 'celular', 'fecha', 'hora', 'distrito'].filter(k => !String(f[k] || '').trim());
   if (faltan.length) { $('#error').textContent = 'Completa: ' + faltan.join(', ') + '.'; return; }
   if (!/^\d{9}$/.test(f.celular.replace(/\D/g, '').slice(-9))) { $('#error').textContent = 'Revisa tu número de celular (9 dígitos).'; return; }
   const u = ubicacion(f);
@@ -161,8 +155,8 @@ $('#form').addEventListener('submit', e => {
     `Masajista: ${f.masajista}`,
     `Fecha: ${fecha}  Hora: ${f.hora}`,
     `Distrito: ${f.distrito}`,
-    u.link ? `📍 Ubicación: ${u.link}` : '',
-    f.direccion ? `${u.link ? 'Referencia' : 'Dirección'}: ${f.direccion}` : '',
+    `📍 Ubicación: ${u.link}`,
+    f.direccion ? `Referencia: ${f.direccion}` : '',
     f.notas ? `Notas: ${f.notas}` : '',
     `Total estimado: ${soles(t.total)} (servicio ${soles(t.precio)} + taxi ${soles(t.taxi)})`
   ].filter(Boolean).join('\n');

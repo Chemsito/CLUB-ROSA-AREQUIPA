@@ -90,13 +90,12 @@
       <label>Distrito<select name="distrito" id="sel-distrito" required></select></label>
       <fieldset class="ubicacion">
         <legend>¿Cómo nos indicas tu dirección?</legend>
-        <input type="hidden" name="modo" id="modo-ubicacion" value="texto">
+        <input type="hidden" name="modo" id="modo-ubicacion" value="link">
         <div class="tabs" role="tablist">
-          <button type="button" role="tab" data-modo="texto" aria-selected="true">✍️ Escribir</button>
-          <button type="button" role="tab" data-modo="link" aria-selected="false">🔗 Link de Maps</button>
+          <button type="button" role="tab" data-modo="link" aria-selected="true">🔗 Link de Maps</button>
           <button type="button" role="tab" data-modo="mapa" aria-selected="false">🗺️ En el mapa</button>
         </div>
-        <div data-panel="link" hidden>
+        <div data-panel="link">
           <label>Link de Google Maps<input name="link" inputmode="url" autocomplete="off" placeholder="https://maps.app.goo.gl/..."></label>
           <small class="ayuda">En Google Maps toca tu ubicación → <b>Compartir</b> → <b>Copiar enlace</b> y pégalo aquí.</small>
         </div>
@@ -107,7 +106,7 @@
             <small class="ayuda" id="mapa-estado">Toca el mapa para marcar dónde estás. Puedes arrastrar el pin.</small>
           </div>
         </div>
-        <label><span id="txt-direccion">Dirección y referencia</span><input name="direccion" autocomplete="street-address" placeholder="Calle, número, referencia"></label>
+        <label>Referencia (opcional)<input name="direccion" autocomplete="street-address" placeholder="Ej.: casa de rejas blancas, dpto. 302"></label>
       </fieldset>
       <input type="text" name="web" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
       <label>Comentarios (opcional)<textarea name="notas" rows="2" placeholder="Ej.: preferencia de presión, alguna zona con molestia..."></textarea></label>
