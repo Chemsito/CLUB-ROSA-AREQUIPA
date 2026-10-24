@@ -5,7 +5,7 @@
 const HOJA = 'RESERVAS_WEB';
 const DASH = 'DASHBOARD';
 const CALC = '_calc';
-const FOTOS = 'FOTOS';
+const MASAJISTAS = 'MASAJISTAS';
 const COLUMNAS = ['Fecha_Solicitud', 'Cliente', 'Celular', 'Distrito', 'Direccion', 'Fecha_Servicio', 'Hora',
   'Servicio', 'Masajista_Preferida', 'Zona_Taxi', 'Total_Estimado', 'Estado', 'Notas'];
 const ESTADOS = ['Nueva', 'Confirmada', 'Atendida', 'Cancelada'];
@@ -14,7 +14,7 @@ const C = { rosa: '#C2185B', osc: '#880E4F', claro: '#F8BBD0', palido: '#FCE4EC'
 // ======================= RECEPCION DE RESERVAS =======================
 function doPost(e) {
   const p = (e && e.parameter) || {};
-  if (p.accion === 'foto') return guardarFoto(p);
+  if (p.accion === 'masajista') return guardarMasajista(p);
   if (p.web) return respuesta({ ok: true }); // campo trampa: solo lo llenan los bots
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -30,57 +30,67 @@ function doPost(e) {
   }
 }
 
-// Permite comprobar en el navegador que la URL del script funciona; ?accion=fotos devuelve las fotos de perfil
+// Permite comprobar en el navegador que la URL del script funciona; ?accion=masajistas devuelve la lista de masajistas
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (p.accion === 'fotos') return respuesta({ ok: true, fotos: leerFotos() });
+  if (p.accion === 'masajistas') return respuesta({ ok: true, masajistas: leerMasajistas() });
   return respuesta({ ok: true, hoja: HOJA });
 }
 
-// ======================= FOTOS DE PERFIL =======================
-// Cada foto se guarda como imagen reducida (texto data:image/jpeg) en la hoja FOTOS.
+// ======================= MASAJISTAS Y FOTOS DE PERFIL =======================
+// La hoja MASAJISTAS guarda las masajistas agregadas o editadas desde la pagina (modo #admin).
+// La foto se guarda como imagen reducida (texto data:image/jpeg) en la columna Foto.
 // La clave se define en Configuracion del proyecto -> Propiedades del script -> CLAVE_FOTOS
-function guardarFoto(p) {
+const COLS_MASAJISTAS = ['Nombre', 'Especialidad', 'Foto', 'Activa', 'Actualizado'];
+
+// Agrega o actualiza una masajista; solo cambia los campos que llegan (especialidad, foto, activa)
+function guardarMasajista(p) {
   const clave = PropertiesService.getScriptProperties().getProperty('CLAVE_FOTOS');
   if (!clave) return respuesta({ ok: false, error: 'Falta definir CLAVE_FOTOS en las propiedades del script.' });
   if (p.clave !== clave) return respuesta({ ok: false, error: 'clave' });
-  const nombre = String(p.masajista || '').trim();
-  const foto = String(p.foto || '');
-  if (!nombre || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(foto) || foto.length > 50000) {
+  const nombre = String(p.nombre || '').trim().slice(0, 40);
+  if (!nombre) return respuesta({ ok: false, error: 'Falta el nombre.' });
+  if (p.foto !== undefined && (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p.foto) || p.foto.length > 50000)) {
     return respuesta({ ok: false, error: 'Foto no valida.' });
   }
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const hoja = hojaFotos();
-    const nombres = hoja.getRange(1, 1, hoja.getLastRow(), 1).getValues().map(f => f[0]);
-    const fila = nombres.indexOf(nombre) + 1 || hoja.getLastRow() + 1;
-    hoja.getRange(fila, 1, 1, 3).setValues([[limpiar(nombre), foto, new Date()]]);
-    return respuesta({ ok: true });
+    const hoja = hojaMasajistas();
+    const nombres = hoja.getRange(1, 1, hoja.getLastRow(), 1).getValues().map(f => String(f[0]).toLowerCase());
+    let fila = nombres.indexOf(nombre.toLowerCase()) + 1;
+    if (fila < 2) { fila = hoja.getLastRow() + 1; hoja.getRange(fila, 1, 1, 4).setValues([[limpiar(nombre), '', '', 'Si']]); }
+    if (p.especialidad !== undefined) hoja.getRange(fila, 2).setValue(limpiar(String(p.especialidad).trim().slice(0, 80)));
+    if (p.foto !== undefined) hoja.getRange(fila, 3).setValue(p.foto);
+    if (p.activa !== undefined) hoja.getRange(fila, 4).setValue(p.activa === 'No' ? 'No' : 'Si');
+    hoja.getRange(fila, 5).setValue(new Date());
+    SpreadsheetApp.flush();
+    return respuesta({ ok: true, masajistas: leerMasajistas() });
   } finally {
     lock.releaseLock();
   }
 }
 
-function leerFotos() {
-  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FOTOS);
-  if (!hoja || hoja.getLastRow() < 2) return {};
-  const fotos = {};
-  hoja.getRange(2, 1, hoja.getLastRow() - 1, 2).getValues().forEach(([nombre, foto]) => { if (nombre && foto) fotos[nombre] = foto; });
-  return fotos;
+function leerMasajistas() {
+  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(MASAJISTAS);
+  if (!hoja || hoja.getLastRow() < 2) return [];
+  return hoja.getRange(2, 1, hoja.getLastRow() - 1, 4).getValues()
+    .filter(f => f[0])
+    .map(([nombre, especialidad, foto, activa]) => ({ nombre: String(nombre), especialidad: String(especialidad), foto: String(foto), activa: activa !== 'No' }));
 }
 
-function hojaFotos() {
+function hojaMasajistas() {
   const libro = SpreadsheetApp.getActiveSpreadsheet();
-  let hoja = libro.getSheetByName(FOTOS);
+  let hoja = libro.getSheetByName(MASAJISTAS);
   if (!hoja) {
-    hoja = libro.insertSheet(FOTOS);
-    hoja.appendRow(['Masajista', 'Foto', 'Actualizado']);
-    hoja.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground(C.rosa).setFontColor(C.blanco);
+    hoja = libro.insertSheet(MASAJISTAS);
+    hoja.appendRow(COLS_MASAJISTAS);
+    hoja.getRange(1, 1, 1, COLS_MASAJISTAS.length).setFontWeight('bold').setBackground(C.rosa).setFontColor(C.blanco);
     hoja.setFrozenRows(1);
-    hoja.getRange('B:B').setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
-    hoja.setColumnWidth(2, 200);
-    hoja.getRange('C2:C').setNumberFormat('dd/mm/yyyy hh:mm');
+    hoja.getRange('C:C').setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    hoja.setColumnWidth(3, 200);
+    hoja.getRange('D2:D').setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(['Si', 'No'], true).build());
+    hoja.getRange('E2:E').setNumberFormat('dd/mm/yyyy hh:mm');
   }
   return hoja;
 }

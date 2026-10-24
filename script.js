@@ -39,20 +39,6 @@ $('#lista-servicios').innerHTML = CONFIG.servicios.map(s => `
     <a href="#reservar" class="btn btn-ghost" data-servicio="${s.nombre}">Elegir</a>
   </article>`).join('');
 
-// Modo administracion: abre la pagina con #admin al final de la direccion para ver el boton de subir fotos
-const ADMIN = /admin/i.test(location.hash + location.search);
-
-$('#lista-masajistas').innerHTML = CONFIG.masajistas.map(m => `
-  <article class="member">
-    <div class="avatar" data-avatar="${m.nombre}">${m.nombre[0]}</div>
-    <h3>${m.nombre}</h3>
-    <p>${m.especialidad}</p>
-    <a href="#reservar" class="btn btn-sm" data-masajista="${m.nombre}">Solicitar a ${m.nombre}</a>
-    ${ADMIN ? `<label class="btn btn-ghost btn-sm subir-foto">📷 Subir foto
-      <input type="file" accept="image/*" data-foto="${m.nombre}" hidden></label>
-      <small class="estado-foto" data-estado="${m.nombre}"></small>` : ''}
-  </article>`).join('');
-
 $('#lista-zonas').innerHTML = CONFIG.zonas.map(z => `
   <div class="zona"><b>${z.nombre}</b><span>${soles(z.taxi)}</span><small>${z.desc}</small></div>`).join('');
 
@@ -60,7 +46,6 @@ $('#lista-zonas').innerHTML = CONFIG.zonas.map(z => `
 const opt = (v, t = v) => `<option value="${v}">${t}</option>`;
 $('#sel-servicio').innerHTML = CONFIG.servicios.map(s => opt(s.nombre, `${duracion(s.minutos)} — ${soles(s.precio)}`)).join('');
 $('#sel-servicio').value = 'Masaje 1 hora';
-$('#sel-masajista').innerHTML = opt('Cualquiera', 'Cualquiera disponible') + CONFIG.masajistas.map(m => opt(m.nombre)).join('');
 $('#sel-distrito').innerHTML = opt('', 'Elige tu distrito') + Object.keys(CONFIG.distritos).map(d => opt(d)).join('');
 $('#sel-zona').innerHTML = CONFIG.zonas.map(z => opt(z.nombre, `${z.nombre} — taxi ${soles(z.taxi)}`)).join('');
 
@@ -125,24 +110,88 @@ function guardarEnSheets(datos) {
   fetch(CONFIG.sheetsUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams(datos) }).catch(() => {});
 }
 
-// ----- Fotos de perfil de las masajistas (guardadas en la hoja FOTOS de Google Sheets) -----
-const CACHE_FOTOS = 'clubrosa-fotos';
-function mostrarFotos(fotos) {
-  Object.entries(fotos || {}).forEach(([nombre, src]) => {
-    const av = document.querySelector(`[data-avatar="${nombre}"]`);
-    if (!av || !src) return;
-    av.textContent = '';
-    av.style.backgroundImage = `url("${src}")`;
-    av.classList.add('con-foto');
+// ----- Masajistas (lista base en CONFIG + las agregadas/editadas en la hoja MASAJISTAS de Google Sheets) -----
+// Modo administracion: abre la pagina con #admin al final de la direccion para agregar, editar y subir fotos
+const ADMIN = /admin/i.test(location.hash + location.search);
+const CACHE_MASAJISTAS = 'clubrosa-masajistas';
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let masajistas = [];
+
+// Une la lista base con lo guardado en la hoja: la hoja manda (especialidad, foto, activa) y puede agregar nuevas
+function combinar(filas) {
+  const lista = CONFIG.masajistas.map(m => ({ ...m, activa: true }));
+  (filas || []).forEach(f => {
+    const m = lista.find(x => x.nombre.toLowerCase() === f.nombre.toLowerCase());
+    if (!m) return lista.push({ ...f });
+    if (f.especialidad) m.especialidad = f.especialidad;
+    if (f.foto) m.foto = f.foto;
+    m.activa = f.activa;
   });
+  return lista.filter(m => m.activa !== false);
 }
-try { mostrarFotos(JSON.parse(localStorage.getItem(CACHE_FOTOS))); } catch (e) {}
+
+function renderMasajistas(filas) {
+  masajistas = combinar(filas);
+  $('#lista-masajistas').innerHTML = masajistas.map(m => `
+  <article class="member" data-nombre="${esc(m.nombre)}">
+    <div class="avatar${m.foto ? ' con-foto' : ''}"${m.foto ? ` style="background-image:url('${esc(m.foto)}')"` : ''}>${m.foto ? '' : esc(m.nombre[0])}</div>
+    <h3>${esc(m.nombre)}</h3>
+    <p>${esc(m.especialidad)}</p>
+    <a href="#reservar" class="btn btn-sm" data-masajista="${esc(m.nombre)}">Solicitar a ${esc(m.nombre)}</a>
+    ${ADMIN ? `<div class="admin-acciones">
+      <label class="btn btn-ghost btn-sm">📷 Foto<input type="file" accept="image/*" data-foto hidden></label>
+      <button type="button" class="btn btn-ghost btn-sm" data-editar>✏️ Editar</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-quitar>🗑️ Quitar</button>
+    </div>
+    <small class="estado-foto"></small>` : ''}
+  </article>`).join('');
+  const sel = $('#sel-masajista'), antes = sel.value;
+  sel.innerHTML = opt('Cualquiera', 'Cualquiera disponible') + masajistas.map(m => opt(esc(m.nombre))).join('');
+  if (masajistas.some(m => m.nombre === antes)) sel.value = antes;
+}
+
+function actualizarLista(filas) {
+  renderMasajistas(filas);
+  try { localStorage.setItem(CACHE_MASAJISTAS, JSON.stringify(filas)); } catch (e) {}
+}
+let guardadas = [];
+try { guardadas = JSON.parse(localStorage.getItem(CACHE_MASAJISTAS)) || []; } catch (e) {}
+renderMasajistas(guardadas);
 if (CONFIG.sheetsUrl) {
-  fetch(CONFIG.sheetsUrl + '?accion=fotos').then(r => r.json()).then(r => {
-    if (!r.fotos) return;
-    mostrarFotos(r.fotos);
-    try { localStorage.setItem(CACHE_FOTOS, JSON.stringify(r.fotos)); } catch (e) {}
+  fetch(CONFIG.sheetsUrl + '?accion=masajistas').then(r => r.json()).then(r => {
+    if (Array.isArray(r.masajistas)) actualizarLista(r.masajistas);
   }).catch(() => {});
+}
+
+// Envia un cambio a la hoja con la clave de administracion; la hoja responde con la lista actualizada
+async function guardarMasajista(datos) {
+  if (!CONFIG.sheetsUrl) throw new Error('Falta configurar sheetsUrl en script.js.');
+  const clave = sessionStorage.getItem('clubrosa-clave') || prompt('Clave de administración:');
+  if (!clave) throw new Error('Cancelado.');
+  const r = await fetch(CONFIG.sheetsUrl, { method: 'POST', body: new URLSearchParams({ accion: 'masajista', clave, ...datos }) }).then(x => x.json());
+  if (!r.ok) {
+    if (r.error === 'clave') sessionStorage.removeItem('clubrosa-clave');
+    throw new Error(r.error === 'clave' ? 'Clave incorrecta.' : (r.error || 'No se pudo guardar.'));
+  }
+  sessionStorage.setItem('clubrosa-clave', clave);
+  actualizarLista(r.masajistas);
+}
+
+const estadoDe = nombre => [...document.querySelectorAll('.member')].find(a => a.dataset.nombre === nombre)?.querySelector('.estado-foto');
+function aviso(el, txt, error) {
+  if (!el) return;
+  el.textContent = txt;
+  el.classList.toggle('error', !!error);
+}
+// La tarjeta se vuelve a dibujar al guardar, por eso el aviso se busca de nuevo despues
+async function accionTarjeta(nombre, datos, listo) {
+  aviso(estadoDe(nombre), 'Guardando...');
+  try {
+    await guardarMasajista({ nombre, ...datos });
+    aviso(estadoDe(nombre), listo);
+  } catch (err) {
+    aviso(estadoDe(nombre), err.message, true);
+  }
 }
 
 // Recorta la imagen al centro en un cuadrado y la reduce para que quepa en una celda de la hoja (max 50.000 caracteres)
@@ -151,7 +200,7 @@ function prepararFoto(archivo) {
     const img = new Image();
     img.onload = () => {
       const lado = Math.min(img.width, img.height);
-      for (const [px, calidad] of [[360, .85], [320, .75], [280, .65], [240, .55], [200, .5]]) {
+      for (const [px, calidad] of [[600, .8], [520, .75], [460, .7], [400, .65], [340, .6], [280, .5]]) {
         const c = document.createElement('canvas');
         c.width = c.height = px;
         c.getContext('2d').drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, px, px);
@@ -168,34 +217,59 @@ function prepararFoto(archivo) {
 document.addEventListener('change', async e => {
   const input = e.target.closest('[data-foto]');
   if (!input || !input.files[0]) return;
-  const nombre = input.dataset.foto;
-  const estado = document.querySelector(`[data-estado="${nombre}"]`);
-  const aviso = (txt, error) => { estado.textContent = txt; estado.classList.toggle('error', !!error); };
-  if (!CONFIG.sheetsUrl) return aviso('Falta configurar sheetsUrl en script.js.', true);
-  let clave = sessionStorage.getItem('clubrosa-clave') || prompt('Clave de administración para subir fotos:');
-  if (!clave) return;
+  const nombre = input.closest('.member').dataset.nombre;
   try {
-    aviso('Subiendo foto...');
     const foto = await prepararFoto(input.files[0]);
-    const r = await fetch(CONFIG.sheetsUrl, { method: 'POST', body: new URLSearchParams({ accion: 'foto', masajista: nombre, clave, foto }) }).then(x => x.json());
-    if (!r.ok) {
-      if (r.error === 'clave') sessionStorage.removeItem('clubrosa-clave');
-      throw new Error(r.error === 'clave' ? 'Clave incorrecta.' : (r.error || 'No se pudo guardar.'));
-    }
-    sessionStorage.setItem('clubrosa-clave', clave);
-    mostrarFotos({ [nombre]: foto });
-    try {
-      const cache = JSON.parse(localStorage.getItem(CACHE_FOTOS) || '{}');
-      cache[nombre] = foto;
-      localStorage.setItem(CACHE_FOTOS, JSON.stringify(cache));
-    } catch (err) {}
-    aviso('✅ Foto guardada');
+    await accionTarjeta(nombre, { foto }, '✅ Foto guardada');
   } catch (err) {
-    aviso(err.message || 'No se pudo guardar la foto.', true);
-  } finally {
-    input.value = '';
+    aviso(estadoDe(nombre), err.message, true);
+  }
+  input.value = '';
+});
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-editar],[data-quitar]');
+  if (!b) return;
+  const nombre = b.closest('.member').dataset.nombre;
+  if (b.hasAttribute('data-editar')) {
+    const actual = masajistas.find(m => m.nombre === nombre)?.especialidad || '';
+    const especialidad = prompt(`Especialidad de ${nombre}:`, actual);
+    if (especialidad !== null && especialidad.trim() !== actual) accionTarjeta(nombre, { especialidad }, '✅ Cambios guardados');
+  } else if (confirm(`¿Quitar a ${nombre} de la página? Podrás volver a agregarla con el mismo nombre.`)) {
+    accionTarjeta(nombre, { activa: 'No' }, '');
   }
 });
+
+// Formulario para agregar una masajista nueva (solo en modo #admin)
+if (ADMIN) {
+  $('#admin-masajistas').innerHTML = `
+  <form id="form-nueva" class="form admin-form" novalidate>
+    <h3>➕ Agregar masajista</h3>
+    <div class="row">
+      <label>Nombre<input name="nombre" required maxlength="40" placeholder="Ej.: Sofía"></label>
+      <label>Especialidad<input name="especialidad" maxlength="80" placeholder="Ej.: Relajante y descontracturante"></label>
+    </div>
+    <label>Foto de perfil (opcional)<input type="file" name="foto" accept="image/*"></label>
+    <p class="estado-foto" id="estado-nueva"></p>
+    <button class="btn btn-block" type="submit">Agregar masajista</button>
+  </form>`;
+  $('#form-nueva').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, estado = $('#estado-nueva');
+    const nombre = f.nombre.value.trim();
+    if (!nombre) return aviso(estado, 'Escribe el nombre.', true);
+    const datos = { nombre, especialidad: f.especialidad.value.trim(), activa: 'Si' };
+    try {
+      aviso(estado, 'Guardando...');
+      if (f.foto.files[0]) datos.foto = await prepararFoto(f.foto.files[0]);
+      await guardarMasajista(datos);
+      f.reset();
+      aviso(estado, `✅ ${nombre} agregada`);
+    } catch (err) {
+      aviso(estado, err.message, true);
+    }
+  });
+}
 
 const wa = `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent('Hola Club Rosa, quisiera información sobre los masajes a domicilio.')}`;
 $('#wa-link').href = wa; $('#wa-float').href = wa;
