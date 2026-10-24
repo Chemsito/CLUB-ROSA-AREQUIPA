@@ -39,12 +39,18 @@ $('#lista-servicios').innerHTML = CONFIG.servicios.map(s => `
     <a href="#reservar" class="btn btn-ghost" data-servicio="${s.nombre}">Elegir</a>
   </article>`).join('');
 
+// Modo administracion: abre la pagina con #admin al final de la direccion para ver el boton de subir fotos
+const ADMIN = /admin/i.test(location.hash + location.search);
+
 $('#lista-masajistas').innerHTML = CONFIG.masajistas.map(m => `
   <article class="member">
-    <div class="avatar">${m.nombre[0]}</div>
+    <div class="avatar" data-avatar="${m.nombre}">${m.nombre[0]}</div>
     <h3>${m.nombre}</h3>
     <p>${m.especialidad}</p>
     <a href="#reservar" class="btn btn-sm" data-masajista="${m.nombre}">Solicitar a ${m.nombre}</a>
+    ${ADMIN ? `<label class="btn btn-ghost btn-sm subir-foto">📷 Subir foto
+      <input type="file" accept="image/*" data-foto="${m.nombre}" hidden></label>
+      <small class="estado-foto" data-estado="${m.nombre}"></small>` : ''}
   </article>`).join('');
 
 $('#lista-zonas').innerHTML = CONFIG.zonas.map(z => `
@@ -118,6 +124,78 @@ function guardarEnSheets(datos) {
   if (!CONFIG.sheetsUrl) return;
   fetch(CONFIG.sheetsUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams(datos) }).catch(() => {});
 }
+
+// ----- Fotos de perfil de las masajistas (guardadas en la hoja FOTOS de Google Sheets) -----
+const CACHE_FOTOS = 'clubrosa-fotos';
+function mostrarFotos(fotos) {
+  Object.entries(fotos || {}).forEach(([nombre, src]) => {
+    const av = document.querySelector(`[data-avatar="${nombre}"]`);
+    if (!av || !src) return;
+    av.textContent = '';
+    av.style.backgroundImage = `url("${src}")`;
+    av.classList.add('con-foto');
+  });
+}
+try { mostrarFotos(JSON.parse(localStorage.getItem(CACHE_FOTOS))); } catch (e) {}
+if (CONFIG.sheetsUrl) {
+  fetch(CONFIG.sheetsUrl + '?accion=fotos').then(r => r.json()).then(r => {
+    if (!r.fotos) return;
+    mostrarFotos(r.fotos);
+    try { localStorage.setItem(CACHE_FOTOS, JSON.stringify(r.fotos)); } catch (e) {}
+  }).catch(() => {});
+}
+
+// Recorta la imagen al centro en un cuadrado y la reduce para que quepa en una celda de la hoja (max 50.000 caracteres)
+function prepararFoto(archivo) {
+  return new Promise((ok, falla) => {
+    const img = new Image();
+    img.onload = () => {
+      const lado = Math.min(img.width, img.height);
+      for (const [px, calidad] of [[360, .85], [320, .75], [280, .65], [240, .55], [200, .5]]) {
+        const c = document.createElement('canvas');
+        c.width = c.height = px;
+        c.getContext('2d').drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, px, px);
+        const datos = c.toDataURL('image/jpeg', calidad);
+        if (datos.length < 45000) { URL.revokeObjectURL(img.src); return ok(datos); }
+      }
+      falla(new Error('La imagen es demasiado pesada.'));
+    };
+    img.onerror = () => falla(new Error('No se pudo leer la imagen.'));
+    img.src = URL.createObjectURL(archivo);
+  });
+}
+
+document.addEventListener('change', async e => {
+  const input = e.target.closest('[data-foto]');
+  if (!input || !input.files[0]) return;
+  const nombre = input.dataset.foto;
+  const estado = document.querySelector(`[data-estado="${nombre}"]`);
+  const aviso = (txt, error) => { estado.textContent = txt; estado.classList.toggle('error', !!error); };
+  if (!CONFIG.sheetsUrl) return aviso('Falta configurar sheetsUrl en script.js.', true);
+  let clave = sessionStorage.getItem('clubrosa-clave') || prompt('Clave de administración para subir fotos:');
+  if (!clave) return;
+  try {
+    aviso('Subiendo foto...');
+    const foto = await prepararFoto(input.files[0]);
+    const r = await fetch(CONFIG.sheetsUrl, { method: 'POST', body: new URLSearchParams({ accion: 'foto', masajista: nombre, clave, foto }) }).then(x => x.json());
+    if (!r.ok) {
+      if (r.error === 'clave') sessionStorage.removeItem('clubrosa-clave');
+      throw new Error(r.error === 'clave' ? 'Clave incorrecta.' : (r.error || 'No se pudo guardar.'));
+    }
+    sessionStorage.setItem('clubrosa-clave', clave);
+    mostrarFotos({ [nombre]: foto });
+    try {
+      const cache = JSON.parse(localStorage.getItem(CACHE_FOTOS) || '{}');
+      cache[nombre] = foto;
+      localStorage.setItem(CACHE_FOTOS, JSON.stringify(cache));
+    } catch (err) {}
+    aviso('✅ Foto guardada');
+  } catch (err) {
+    aviso(err.message || 'No se pudo guardar la foto.', true);
+  } finally {
+    input.value = '';
+  }
+});
 
 const wa = `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent('Hola Club Rosa, quisiera información sobre los masajes a domicilio.')}`;
 $('#wa-link').href = wa; $('#wa-float').href = wa;

@@ -5,6 +5,7 @@
 const HOJA = 'RESERVAS_WEB';
 const DASH = 'DASHBOARD';
 const CALC = '_calc';
+const FOTOS = 'FOTOS';
 const COLUMNAS = ['Fecha_Solicitud', 'Cliente', 'Celular', 'Distrito', 'Direccion', 'Fecha_Servicio', 'Hora',
   'Servicio', 'Masajista_Preferida', 'Zona_Taxi', 'Total_Estimado', 'Estado', 'Notas'];
 const ESTADOS = ['Nueva', 'Confirmada', 'Atendida', 'Cancelada'];
@@ -13,6 +14,7 @@ const C = { rosa: '#C2185B', osc: '#880E4F', claro: '#F8BBD0', palido: '#FCE4EC'
 // ======================= RECEPCION DE RESERVAS =======================
 function doPost(e) {
   const p = (e && e.parameter) || {};
+  if (p.accion === 'foto') return guardarFoto(p);
   if (p.web) return respuesta({ ok: true }); // campo trampa: solo lo llenan los bots
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -28,9 +30,59 @@ function doPost(e) {
   }
 }
 
-// Permite comprobar en el navegador que la URL del script funciona
-function doGet() {
+// Permite comprobar en el navegador que la URL del script funciona; ?accion=fotos devuelve las fotos de perfil
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (p.accion === 'fotos') return respuesta({ ok: true, fotos: leerFotos() });
   return respuesta({ ok: true, hoja: HOJA });
+}
+
+// ======================= FOTOS DE PERFIL =======================
+// Cada foto se guarda como imagen reducida (texto data:image/jpeg) en la hoja FOTOS.
+// La clave se define en Configuracion del proyecto -> Propiedades del script -> CLAVE_FOTOS
+function guardarFoto(p) {
+  const clave = PropertiesService.getScriptProperties().getProperty('CLAVE_FOTOS');
+  if (!clave) return respuesta({ ok: false, error: 'Falta definir CLAVE_FOTOS en las propiedades del script.' });
+  if (p.clave !== clave) return respuesta({ ok: false, error: 'clave' });
+  const nombre = String(p.masajista || '').trim();
+  const foto = String(p.foto || '');
+  if (!nombre || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(foto) || foto.length > 50000) {
+    return respuesta({ ok: false, error: 'Foto no valida.' });
+  }
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const hoja = hojaFotos();
+    const nombres = hoja.getRange(1, 1, hoja.getLastRow(), 1).getValues().map(f => f[0]);
+    const fila = nombres.indexOf(nombre) + 1 || hoja.getLastRow() + 1;
+    hoja.getRange(fila, 1, 1, 3).setValues([[limpiar(nombre), foto, new Date()]]);
+    return respuesta({ ok: true });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function leerFotos() {
+  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FOTOS);
+  if (!hoja || hoja.getLastRow() < 2) return {};
+  const fotos = {};
+  hoja.getRange(2, 1, hoja.getLastRow() - 1, 2).getValues().forEach(([nombre, foto]) => { if (nombre && foto) fotos[nombre] = foto; });
+  return fotos;
+}
+
+function hojaFotos() {
+  const libro = SpreadsheetApp.getActiveSpreadsheet();
+  let hoja = libro.getSheetByName(FOTOS);
+  if (!hoja) {
+    hoja = libro.insertSheet(FOTOS);
+    hoja.appendRow(['Masajista', 'Foto', 'Actualizado']);
+    hoja.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground(C.rosa).setFontColor(C.blanco);
+    hoja.setFrozenRows(1);
+    hoja.getRange('B:B').setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    hoja.setColumnWidth(2, 200);
+    hoja.getRange('C2:C').setNumberFormat('dd/mm/yyyy hh:mm');
+  }
+  return hoja;
 }
 
 function onOpen() {

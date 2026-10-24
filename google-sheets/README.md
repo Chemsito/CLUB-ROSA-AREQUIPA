@@ -18,5 +18,14 @@ Cada reserva enviada desde la página se guarda como una fila nueva en la hoja `
 
 Cambia la columna **Estado** de cada reserva (Nueva → Confirmada → Atendida / Cancelada) y el dashboard se recalcula.
 
+## Fotos de perfil de las masajistas
+Las fotos se suben desde la misma página y se guardan en la pestaña **FOTOS** de la hoja, así todos los visitantes las ven.
+1. En Apps Script: **⚙️ Configuración del proyecto → Propiedades del script → Agregar propiedad**. Nombre: `CLAVE_FOTOS`, valor: la clave que quieras. Guarda.
+2. Actualiza la implementación (ver abajo) para que tome el código nuevo.
+3. Abre la página con `#admin` al final, por ejemplo `https://chemsito.github.io/CLUB-ROSA-AREQUIPA/#admin` y recarga.
+4. En cada masajista aparece **📷 Subir foto**. Elige la imagen, escribe la clave y verás **✅ Foto guardada**. Para cambiarla, vuelve a subir otra.
+
+La foto se recorta en cuadrado y se reduce automáticamente. Sin `#admin` el botón no aparece, y sin la clave nadie puede cambiar las fotos.
+
 ## Actualizar el código
 Usa **Implementar → Gestionar implementaciones → ✏️ Editar → Versión: Nueva versión → Implementar**: así la URL no cambia.
